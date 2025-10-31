@@ -1,0 +1,319 @@
+openapi: 3.1.0
+info:
+  title: Adam Coach API
+  version: 0.1.0
+  description: |
+    Edge function endpoints that let the Adam ChatGPT plugin read and update
+    goals, habits, and todos on behalf of an authenticated user.
+servers:
+  - url: https://<your-plugin-domain>
+    description: Supabase Edge Functions deployment hosting the assistant router.
+paths:
+  /v1/goals:
+    get:
+      operationId: listGoals
+      summary: List the user's goals and related progress
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Goals available to the authenticated user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  goals:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GoalSummary'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  /v1/habits:
+    get:
+      operationId: listHabits
+      summary: List the user's habits with recent completion data
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Habits with current status for the user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  habits:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/HabitSummary'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  /v1/habits/{habitId}/complete:
+    post:
+      operationId: completeHabit
+      summary: Mark a habit complete for the current day
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: habitId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: Optional completion metadata.
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HabitCompletionRequest'
+      responses:
+        '200':
+          description: Completion confirmation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HabitCompletion'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '409':
+          description: Habit already completed for the provided date.
+  /v1/todos:
+    get:
+      operationId: listTodos
+      summary: List the user's active todos and tracking status
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Todos with the most recent tracking information.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  todos:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TodoSummary'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  /v1/todos/{todoId}/complete:
+    post:
+      operationId: completeTodo
+      summary: Record a todo completion event
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: todoId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TodoCompletionRequest'
+      responses:
+        '200':
+          description: Completion entry that was recorded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TodoCompletion'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  /v1/tasks/{taskId}/complete:
+    post:
+      operationId: completeTask
+      summary: Mark a task as complete
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: taskId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCompletionRequest'
+      responses:
+        '200':
+          description: Task with updated completion status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskCompletion'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Supabase access token for the signed-in Adam user.
+  responses:
+    UnauthorizedError:
+      description: Authentication failed or token was missing.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    GoalSummary:
+      type: object
+      description: Aggregated view of a goal and its progress.
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+        description:
+          type: string
+          nullable: true
+        open_tasks:
+          type: integer
+        completed_tasks:
+          type: integer
+        open_habits:
+          type: integer
+        milestones_due:
+          type: integer
+        last_updated_at:
+          type: string
+          format: date-time
+    HabitSummary:
+      type: object
+      description: Habit with recent completion statistics.
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        goal_id:
+          type: string
+          nullable: true
+        category_id:
+          type: string
+          nullable: true
+        completed_today:
+          type: boolean
+        current_streak:
+          type: integer
+        best_streak:
+          type: integer
+        last_completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        completion_rate:
+          type: number
+          format: float
+          description: Rolling completion rate for the last 30 days.
+    HabitCompletionRequest:
+      type: object
+      properties:
+        completed_at:
+          type: string
+          format: date-time
+          description: Optional override timestamp; defaults to now.
+    HabitCompletion:
+      type: object
+      properties:
+        id:
+          type: string
+        habit_id:
+          type: string
+        completed_at:
+          type: string
+          format: date-time
+    TodoSummary:
+      type: object
+      description: Todo item and its recent execution details.
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        goal_id:
+          type: string
+          nullable: true
+        category_id:
+          type: integer
+          nullable: true
+        status:
+          type: string
+        last_completed_on:
+          type: string
+          format: date
+          nullable: true
+        streak:
+          type: integer
+        upcoming_scheduled_for:
+          type: string
+          format: date-time
+          nullable: true
+    TodoCompletionRequest:
+      type: object
+      required:
+        - completed_at
+      properties:
+        completed_at:
+          type: string
+          format: date-time
+    TodoCompletion:
+      type: object
+      properties:
+        tracking_id:
+          type: integer
+        todo_id:
+          type: integer
+        completed_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+    TaskCompletionRequest:
+      type: object
+      properties:
+        completed:
+          type: boolean
+          default: true
+      description: Toggles the task completion flag; defaults to true.
+    TaskCompletion:
+      type: object
+      properties:
+        id:
+          type: string
+        completed:
+          type: boolean
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string

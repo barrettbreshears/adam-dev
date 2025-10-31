@@ -1,0 +1,27 @@
+{
+  "schema_version": "v1",
+  "name_for_human": "Adam Coach",
+  "name_for_model": "adam_coach",
+  "description_for_human": "Helps you review goals, habits, and todos inside Adam.",
+  "description_for_model": "Assist users with viewing and updating their Adam goals, habits, and todos via Supabase-backed endpoints.",
+  "auth": {
+    "type": "oauth",
+    "instructions": "Ask the user to open the Adam mobile app, go to Settings → ChatGPT Plugin, and enter the displayed code on the authorization page.",
+    "client_url": "https://<your-plugin-domain>/plugin-auth/authorize",
+    "scope": "openid profile email",
+    "authorization_url": "https://<your-plugin-domain>/plugin-auth/authorize",
+    "token_url": "https://<your-plugin-domain>/plugin-auth/token",
+    "authorization_content_type": "application/x-www-form-urlencoded",
+    "verification_tokens": {
+      "openai": "replace-with-verification-token"
+    }
+  },
+  "api": {
+    "type": "openapi",
+    "url": "https://<your-plugin-domain>/.well-known/openapi.yaml",
+    "has_user_authentication": true
+  },
+  "logo_url": "https://<your-plugin-domain>/assets/adam-logo.png",
+  "contact_email": "support@your-domain.com",
+  "legal_info_url": "https://your-domain.com/legal"
+}
